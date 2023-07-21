@@ -67,20 +67,20 @@ class GccPRCompilationSession(CompilationSession):
 
     def apply_action(self, action: Event) -> Tuple[bool, Optional[ActionSpace], bool]:
         action_string = action.string_value
-        logging.info("Applying action %d", action_string)
+        logging.info("Applying action %s", action_string)
 
-        self.action_spaces[0][action_string]
+        # self.action_spaces[0].space[action_string]
 
         # Insert pass into corresponding list and ask shuffler to generate a new space 
         # If new action space is empty - return True as first element
         return False, None, False
 
     def get_observation(self, observation_space: ObservationSpace) -> Event:
-        logging.info("Computing observation from space %s", observation_space)
+        logging.info("Computing observation from space %s", observation_space.name)
         if observation_space.name == "runtime":
-            return 100.101
+            return Event(double_value=100.101)
         elif observation_space.name == "size":
-            return 75570
+            return Event(int64_value=75570)
         else:
             raise KeyError(observation_space.name)
 

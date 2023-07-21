@@ -9,5 +9,6 @@ py_library(
 	data = [ "//compiler_gym/envs/gcc_pr/service:gcc-pr-service" ],
 	visibility = ["//visibility:public"],
 	deps = [
+		"//compiler_gym/envs/gcc_pr/datasets",
 	],
 )
