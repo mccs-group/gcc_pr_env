@@ -60,6 +60,28 @@ class GccPRCompilationSession(CompilationSession):
                 int64_value=0,
                 ),
             ),
+        ObservationSpace(
+            name="base_runtime",
+            space=Space(
+                double_value=DoubleRange(min=0),
+                ),
+            deterministic=False,
+            platform_dependent=True,
+            default_observation=Event(
+                double_value=0,
+                ),
+            ),
+        ObservationSpace(
+            name="base_size",
+            space=Space(
+                int64_value=Int64Range(min=0),
+                ),
+            deterministic=True,
+            platform_dependent=True,
+            default_observation=Event(
+                int64_value=0,
+                ),
+            ),
         ]
 
     def __init__(self, working_directory: Path, action_space: ActionSpace, benchmark: Benchmark):
@@ -89,6 +111,14 @@ class GccPRCompilationSession(CompilationSession):
             return Event(double_value=self.get_runtime())
         elif observation_space.name == "size":
             return Event(int64_value=self.get_size())
+        elif observation_space.name == "base_runtime":
+            if self.baseline_runtime == None:
+                self.get_baseline()
+            return Event(double_value=self.baseline_runtime)
+        elif observation_space.name == "base_size":
+            if self.baseline_size == None:
+                self.get_baseline()
+            return Event(int64_value=self.baseline_size)
         else:
             raise KeyError(observation_space.name)
 
@@ -110,10 +140,10 @@ class GccPRCompilationSession(CompilationSession):
 
     def compile_baseline(self):
         self.copy_bench()
-        base_opt = " ".join(self.parsed_bench.params.get("base_opt", "-O2"))
+        base_opt = " ".join(self.parsed_bench.params.get("base_opt", ["-O2"]))
         src_dir = " ".join(self.parsed_bench.params.get("src_dir"))
         build_arg = " ".join(self.parsed_bench.params.get("build"))
-        call(f'''$AARCH_GCC {arg} {build_arg} {src_dir}*.c -o bench.elf''', shell=True, cwd=self.working_dir.joinpath('bench'))
+        call(f'''$AARCH_GCC {base_opt} {build_arg} {src_dir}*.c -o bench.elf''', shell=True, cwd=self.working_dir.joinpath('bench'))
         self._binary_valid = True
 
     def compile(self):

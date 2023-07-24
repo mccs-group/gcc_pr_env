@@ -13,7 +13,7 @@ class SizeRuntimeReward(Reward):
     def __init__(self):
         super().__init__(
                 name="size_runtime",
-                observation_spaces=["runtime", "size"],
+                observation_spaces=["runtime", "size", "base_size", "base_runtime"],
                 default_value=0,
                 default_negates_returns=False,
                 deterministic=False,
