@@ -17,24 +17,50 @@ from shutil import copytree
 from compiler_gym.datasets import (BenchmarkUri, Benchmark)
 from subprocess import *
 from time import *
+from compiler_gym.envs.gcc_pr.shuffler import *
 
 class GccPRCompilationSession(CompilationSession):
 
     compiler_version: str = "7.3.0"
 
+    actions_lib = setuplib("../shuffler/libactions.so")
+    action_list1 = get_action_list(actions_lib, [], [], 1)
+    action_list2 = get_action_list(actions_lib, [], [], 2)
+    action_list3 = get_action_list(actions_lib, [], [], 3)
+
     action_spaces = [
         ActionSpace(
-            name="default",
+            name="list_all",
             space=Space(
                 named_discrete=NamedDiscreteSpace(
-                    name=[
-                        "pass1",
-                        "pass2",
-                        "pass3",
-                        ],
+                    name=action_list1 + action_list2 + action_list3
                     ),
                 ),
-            )
+            ),
+        ActionSpace(
+            name="list1",
+            space=Space(
+                named_discrete=NamedDiscreteSpace(
+                    name=action_list1
+                    ),
+                ),
+            ),
+        ActionSpace(
+            name="list2",
+            space=Space(
+                named_discrete=NamedDiscreteSpace(
+                    name=action_list2
+                    ),
+                ),
+            ),
+        ActionSpace(
+            name="list3",
+            space=Space(
+                named_discrete=NamedDiscreteSpace(
+                    name=action_list3
+                    ),
+                ),
+            ),
         ]
 
     observation_spaces = [
