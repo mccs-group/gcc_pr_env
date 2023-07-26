@@ -6,7 +6,7 @@ from compiler_gym.util.runfiles_path import runfiles_path
 
 from compiler_gym.envs.gcc_pr.datasets import *
 
-GCC_PR_SERVICE_BINARY: Path = runfiles_path("compiler_gym/envs/gcc_pr/service/gcc_pr_service.py")
+GCC_PR_SERVICE_BINARY: Path = runfiles_path("compiler_gym/envs/gcc_pr/service/gcc-pr-service")
 
 class SizeRuntimeReward(Reward):
 

@@ -1,16 +1,20 @@
-load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
-
-py_binary(
-	name = "gcc-pr-service",
+filegroup(
+	name = "gcc-pr-service-files",
 	srcs = [
 		"gcc_pr_service.py",
 	],
-	main="gcc_pr_service.py",
-	visibility = ["//visibility:public"],
-	deps = [
-		"//compiler_gym/service",
-		"//compiler_gym/service/proto",
-		"//compiler_gym/service/runtime",
-        "//compiler_gym/envs/gcc_pr/shuffler:actions_py",
-	],
+    visibility = ["//visibility:public"],
+)
+
+genrule(
+    name = "gcc-pr-service-bin",
+    srcs = [
+        ":gcc-pr-service-files",
+    ],
+    outs = [
+        "gcc-pr-service",
+    ],
+    cmd = "cp $(location :gcc-pr-service-files) $@ && " +
+        "chmod 666 $@",
+    visibility = ["//visibility:public"],
 )
