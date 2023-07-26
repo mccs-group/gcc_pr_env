@@ -5,6 +5,7 @@ from compiler_gym.util.registration import register
 from compiler_gym.util.runfiles_path import runfiles_path
 
 from compiler_gym.envs.gcc_pr.datasets import *
+import math
 
 GCC_PR_SERVICE_BINARY: Path = runfiles_path("compiler_gym/envs/gcc_pr/service/gcc-pr-service")
 
@@ -23,14 +24,25 @@ class SizeRuntimeReward(Reward):
         self.base_size = None
 
     def reset(self, benchmark: str, observation_view):
-        self.base_runtime = None
-        self.base_size = None
+        self.base_runtime = observation_view["base_runtime"]
+        self.base_size = observation_view["base_size"]
 
     def update(self, action, observations, observation_view):
         del action
-        #reward = observations[0] + observations[1]
-        reward = float(58008)
-        return reward
+        size = observation_view["size"]
+        if size == 0:
+            return 0
+        size_delta = (self.base_size - size) / self.base_size
+        if size_delta < 0:
+            return size_delta
+        else:
+            runtime = observation_view["runtime"]
+            runtime_delta = (self.base_runtime - runtime) / self.base_runtime
+            if runtime_delta >= 0:
+                return size_delta
+            else:
+                return size_delta + runtime_delta
+        return size_delta
 
 register(
         id="gcc_pr-v0",

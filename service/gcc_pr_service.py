@@ -237,7 +237,7 @@ class GccPRCompilationSession(CompilationSession):
 
     def get_runtime(self):
         if not self._lists_valid:
-            return None
+            return 0
         if not self._binary_valid:
             self.compile()
         arg = " ".join(self.parsed_bench.params.get("run"))
@@ -248,7 +248,7 @@ class GccPRCompilationSession(CompilationSession):
 
     def get_size(self):
         if not self._lists_valid:
-            return None
+            return 0
         if not self._binary_valid:
             self.compile()
         return int(run('size bench.elf', shell=True, capture_output=True, cwd=self.working_dir.joinpath('bench')).stdout.split()[6])
