@@ -199,7 +199,6 @@ class GccPRCompilationSession(CompilationSession):
 
     def copy_bench(self):
         if not self._src_copied:
-            print(self.working_dir)
             copytree(self.parsed_bench.path, self.working_dir.joinpath('bench'), dirs_exist_ok=True)
             self._src_copied = True
 
@@ -214,11 +213,15 @@ class GccPRCompilationSession(CompilationSession):
             self._wd_valid = True
 
     def get_baseline(self):
-        self.compile_baseline()
-        self.baseline_size = self.get_size()
-        self.baseline_runtime = self.get_runtime()
-        self._binary_valid = False
-        self._lists_valid = False
+        if ("base_size" in self.parsed_bench.params) or ("base_runtime" in self.parsed_bench.params):
+            self.baseline_size = int(self.parsed_bench.params["base_size"][0])
+            self.baseline_runtime = float(self.parsed_bench.params["base_runtime"][0])
+        else:
+            self.compile_baseline()
+            self.baseline_size = int(self.parsed_bench.params.get("base_size", [self.get_size()])[0])
+            self.baseline_runtime = float(self.parsed_bench.params.get("base_runtime", [self.get_runtime()])[0])
+            self._binary_valid = False
+            self._lists_valid = False
 
     def compile_baseline(self):
         base_opt = " ".join(self.parsed_bench.params.get("base_opt", ["-O2"]))
