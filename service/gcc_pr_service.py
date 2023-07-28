@@ -136,6 +136,8 @@ class GccPRCompilationSession(CompilationSession):
         self._wd_valid = False
         self.copy_bench()
         self.prep_wd()
+        self.runtime = None
+        self.size = None
         logging.info("Started a compilation session for %s", benchmark.uri)
 
     def apply_action(self, action: Event) -> Tuple[bool, Optional[ActionSpace], bool]:
@@ -146,6 +148,9 @@ class GccPRCompilationSession(CompilationSession):
 
         if self.target_list == 0:
             raise NotImplementedError()
+
+        if action_string == "none_pass":
+            return False, False, False
 
         list_num = get_pass_list(self.actions_lib, action_string)
         if list_num == -1:
@@ -176,6 +181,8 @@ class GccPRCompilationSession(CompilationSession):
             new_space = None
 
         self._binary_valid = False
+        self.size = None
+        self.runtime = None
         return True if new_space == None else False, new_space, False
 
     def get_observation(self, observation_space: ObservationSpace) -> Event:
@@ -243,19 +250,22 @@ class GccPRCompilationSession(CompilationSession):
             return 0
         if not self._binary_valid:
             self.compile()
-        arg = " ".join(self.parsed_bench.params.get("run"))
-        start_time = clock_gettime(CLOCK_MONOTONIC)
-        run(f'qemu-aarch64 -L /usr/aarch64-linux-gnu ./bench.elf {arg}', shell=True, cwd=self.working_dir.joinpath('bench'), check=True)
-        end_time = clock_gettime(CLOCK_MONOTONIC)
-        return end_time - start_time
+        if self.runtime == None:
+            arg = " ".join(self.parsed_bench.params.get("run"))
+            start_time = clock_gettime(CLOCK_MONOTONIC)
+            run(f'qemu-aarch64 -L /usr/aarch64-linux-gnu ./bench.elf {arg}', shell=True, cwd=self.working_dir.joinpath('bench'), check=True)
+            end_time = clock_gettime(CLOCK_MONOTONIC)
+            self.runtime = end_time - start_time
+        return self.runtime
 
     def get_size(self):
         if not self._lists_valid:
             return 0
         if not self._binary_valid:
             self.compile()
-        return int(run('size bench.elf', shell=True, capture_output=True, cwd=self.working_dir.joinpath('bench')).stdout.split()[6])
-
+        if self.size == None:
+            self.size = int(run('size bench.elf', shell=True, capture_output=True, cwd=self.working_dir.joinpath('bench')).stdout.split()[6])
+        return self.size
     def get_passes(self):
         passes = []
         if self.target_list == 0:
