@@ -21,6 +21,7 @@ from subprocess import *
 from time import *
 from compiler_gym.envs.gcc_pr.shuffler import *
 import os
+import re
 
 class GccPRCompilationSession(CompilationSession):
 
@@ -131,6 +132,8 @@ class GccPRCompilationSession(CompilationSession):
         self.baseline_runtime = None
         self.target_list = int(self.parsed_bench.params.get("list", ['0'])[0])
         self._lists_valid = False
+        if self.target_list == 1:
+            self._lists_valid = True
         self._binary_valid = False
         self._src_copied = False
         self._wd_valid = False
@@ -147,27 +150,31 @@ class GccPRCompilationSession(CompilationSession):
         logging.info("Applying action %s", action_string)
 
         if self.target_list == 0:
-            raise NotImplementedError()
+            regex_res = re.search("\?(\d)", action_string)
+            if regex_res == None:
+                raise ValueError("Expected specified target list in pass arg")
+            pass_list = int(regex_res.group(1))
+            action_string = re.match("(.*)\?", action_string).group(1)
+        else:
+            pass_list = self.target_list
 
-        if action_string == "none_pass":
+        if re.match("none_pass", action_string) != None:
             return False, False, False
 
         list_num = get_pass_list(self.actions_lib, action_string)
         if list_num == -1:
             raise ValueError(f"Unknown pass {action_string}")
-#         if (self.target_list != 0) && (list_num != self.target_list):
-#             raise ValueError(f"Pass {action_string} from incorrect list ({list_num} vs {self.target_list})")
 
-        with open(self.working_dir.joinpath(f"bench/list{self.target_list}.txt"), "a") as pass_file:
+        with open(self.working_dir.joinpath(f"bench/list{pass_list}.txt"), "a") as pass_file:
             pass_file.write(action_string + "\n")
 
-        list_check = valid_pass_seq(self.actions_lib, self.get_passes(), self.target_list)
+        list_check = valid_pass_seq(self.actions_lib, self.get_passes(), pass_list)
         if list_check == 0:
             self._lists_valid = True
         else:
             self._lists_valid = False
 
-        new_list = get_action_list(self.actions_lib, [], self.get_list(self.target_list), self.target_list)
+        new_list = get_action_list(self.actions_lib, [], self.get_list(pass_list), pass_list)
         if new_list != []:
             new_space = ActionSpace(
                 name="new_space",
