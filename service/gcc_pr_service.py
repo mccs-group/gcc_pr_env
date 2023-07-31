@@ -161,14 +161,14 @@ class GccPRCompilationSession(CompilationSession):
         if re.match("none_pass", action_string) != None:
             return False, False, False
 
-        list_num = get_pass_list(self.actions_lib, action_string)
+        list_num = get_pass_list(self.actions_lib, action_string[1:] if action_string[0] == '>' else action_string)
         if list_num == -1:
             raise ValueError(f"Unknown pass {action_string}")
 
         with open(self.working_dir.joinpath(f"bench/list{pass_list}.txt"), "a") as pass_file:
             pass_file.write(action_string + "\n")
 
-        list_check = valid_pass_seq(self.actions_lib, self.get_passes(), pass_list)
+        list_check = valid_pass_seq(self.actions_lib, self.get_list(pass_list), pass_list)
         if list_check == 0:
             self._lists_valid = True
         else:
