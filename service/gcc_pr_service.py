@@ -216,6 +216,9 @@ class GccPRCompilationSession(CompilationSession):
     def copy_bench(self):
         if not self._src_copied:
             copytree(self.parsed_bench.path, self.working_dir.joinpath('bench'), dirs_exist_ok=True)
+            if "bench_repeats" in self.parsed_bench.params:
+                with open(self.working_dir.joinpath("bench/_finfo_dataset"), "w") as f:
+                    f.write(self.parsed_bench.params["bench_repeats"][0])
             self._src_copied = True
 
     def prep_wd(self):
@@ -288,7 +291,6 @@ class GccPRCompilationSession(CompilationSession):
         with open(self.working_dir.joinpath(f"bench/list{list_num}.txt"), "r") as pass_file:
             passes = pass_file.read().splitlines()
         return passes
-
 
 if __name__ == "__main__":
     create_and_run_compiler_gym_service(GccPRCompilationSession)
