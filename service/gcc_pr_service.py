@@ -130,9 +130,9 @@ class GccPRCompilationSession(CompilationSession):
         self.parsed_bench = BenchmarkUri.from_string(benchmark.uri)
         self.baseline_size = None
         self.baseline_runtime = None
-        self.target_list = int(self.parsed_bench.params.get("list", ['0'])[0])
+        self.target_lists = [int(x) for x in self.parsed_bench.params.get("list", ['1', '2', '3'])]
         self._lists_valid = False
-        if self.target_list == 1:
+        if 3 not in self.target_lists:
             self._lists_valid = True
         self._binary_valid = False
         self._src_copied = False
@@ -149,18 +149,20 @@ class GccPRCompilationSession(CompilationSession):
             raise ValueError("Expected pass name, got None")
         logging.info("Applying action %s", action_string)
 
+        if re.match("none_pass", action_string[1:] if action_string[0] == '>' else action_string) != None:
+            return False, False, False
+
         regex_res = re.search("\?(\d)", action_string)
         if regex_res == None:
-            if self.target_list == 0:
+            if (len(self.target_lists) > 1) or (self.target_lists == [0]):
                 raise ValueError("Expected specified target list in pass arg")
             else:
-                pass_list = self.target_list
+                pass_list = self.target_lists[0]
         else:
             pass_list = int(regex_res.group(1))
             action_string = re.match("(.*)\?", action_string).group(1)
-
-        if re.match("none_pass", action_string[1:] if action_string[0] == '>' else action_string) != None:
-            return False, False, False
+            if pass_list not in self.target_lists:
+                action_string = "\n" + action_string
 
         list_num = get_pass_list(self.actions_lib, action_string[1:] if action_string[0] == '>' else action_string)
         if list_num == -1:
@@ -169,11 +171,10 @@ class GccPRCompilationSession(CompilationSession):
         with open(self.working_dir.joinpath(f"bench/list{pass_list}.txt"), "a") as pass_file:
             pass_file.write(action_string + "\n")
 
-        list_check = valid_pass_seq(self.actions_lib, self.get_list(pass_list), pass_list)
-        if list_check == 0:
-            self._lists_valid = True
-        else:
-            self._lists_valid = False
+        self._lists_valid = True
+        for elem in self.target_lists:
+            if valid_pass_seq(self.actions_lib, self.get_list(elem), elem) != 0:
+                self._lists_valid = False
 
         new_list = get_action_list(self.actions_lib, [], self.get_list(pass_list), pass_list)
         if new_list != []:
@@ -219,11 +220,11 @@ class GccPRCompilationSession(CompilationSession):
 
     def prep_wd(self):
         if not self._wd_valid:
-            if self.target_list != 0:
-                copy2("../shuffler/lists/to_shuffle1.txt", self.working_dir.joinpath('bench/list1.txt'))
-                copy2("../shuffler/lists/to_shuffle2.txt", self.working_dir.joinpath('bench/list2.txt'))
-                copy2("../shuffler/lists/to_shuffle3.txt", self.working_dir.joinpath('bench/list3.txt'))
-                os.remove(self.working_dir.joinpath(f'bench/list{self.target_list}.txt'))
+            copy2("../shuffler/lists/to_shuffle1.txt", self.working_dir.joinpath('bench/list1.txt'))
+            copy2("../shuffler/lists/to_shuffle2.txt", self.working_dir.joinpath('bench/list2.txt'))
+            copy2("../shuffler/lists/to_shuffle3.txt", self.working_dir.joinpath('bench/list3.txt'))
+            for elem in self.target_lists:
+                os.remove(self.working_dir.joinpath(f'bench/list{elem}.txt'))
             call('touch list1.txt list2.txt list3.txt', shell=True, cwd=self.working_dir.joinpath('bench'))
             self._wd_valid = True
 
@@ -232,11 +233,12 @@ class GccPRCompilationSession(CompilationSession):
             self.baseline_size = int(self.parsed_bench.params["base_size"][0])
             self.baseline_runtime = float(self.parsed_bench.params["base_runtime"][0])
         else:
+            cache_lists_valid = self._lists_valid
             self.compile_baseline()
             self.baseline_size = int(self.parsed_bench.params.get("base_size", [self.get_size()])[0])
             self.baseline_runtime = float(self.parsed_bench.params.get("base_runtime", [self.get_runtime()])[0])
             self._binary_valid = False
-            self._lists_valid = False
+            self._lists_valid = cache_lists_valid
 
     def compile_baseline(self):
         base_opt = " ".join(self.parsed_bench.params.get("base_opt", ["-O2"]))
@@ -277,12 +279,9 @@ class GccPRCompilationSession(CompilationSession):
 
     def get_passes(self):
         passes = []
-        if self.target_list == 0:
-            for i in range(1, 4):
-                with open(self.working_dir.joinpath(f"bench/list{i}.txt"), "r") as pass_file:
-                    passes += pass_file.read().splitlines()
-        else:
-            passes += self.get_list(self.target_list)
+        for i in self.target_lists:
+            with open(self.working_dir.joinpath(f"bench/list{i}.txt"), "r") as pass_file:
+                passes += pass_file.read().splitlines()
         return passes
 
     def get_list(self, list_num):
