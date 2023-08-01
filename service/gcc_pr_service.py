@@ -149,16 +149,17 @@ class GccPRCompilationSession(CompilationSession):
             raise ValueError("Expected pass name, got None")
         logging.info("Applying action %s", action_string)
 
-        if self.target_list == 0:
-            regex_res = re.search("\?(\d)", action_string)
-            if regex_res == None:
+        regex_res = re.search("\?(\d)", action_string)
+        if regex_res == None:
+            if self.target_list == 0:
                 raise ValueError("Expected specified target list in pass arg")
+            else:
+                pass_list = self.target_list
+        else:
             pass_list = int(regex_res.group(1))
             action_string = re.match("(.*)\?", action_string).group(1)
-        else:
-            pass_list = self.target_list
 
-        if re.match("none_pass", action_string) != None:
+        if re.match("none_pass", action_string[1:] if action_string[0] == '>' else action_string) != None:
             return False, False, False
 
         list_num = get_pass_list(self.actions_lib, action_string[1:] if action_string[0] == '>' else action_string)
@@ -273,6 +274,7 @@ class GccPRCompilationSession(CompilationSession):
         if self.size == None:
             self.size = int(run('size bench.elf', shell=True, capture_output=True, cwd=self.working_dir.joinpath('bench')).stdout.split()[6])
         return self.size
+
     def get_passes(self):
         passes = []
         if self.target_list == 0:
