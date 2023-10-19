@@ -27,7 +27,7 @@ class GccPRCompilationSession(CompilationSession):
 
     compiler_version: str = "7.3.0"
 
-    actions_lib = setuplib("../shuffler/libactions.so")
+    actions_lib = setuplib()
     action_list1 = get_action_list(actions_lib, [], [], 1)
     action_list2 = get_action_list(actions_lib, [], [], 2)
     action_list3 = get_action_list(actions_lib, [], [], 3)
@@ -247,15 +247,17 @@ class GccPRCompilationSession(CompilationSession):
         base_opt = " ".join(self.parsed_bench.params.get("base_opt", ["-O2"]))
         src_dir = " ".join(self.parsed_bench.params.get("src_dir"))
         build_arg = " ".join(self.parsed_bench.params.get("build"))
-        check_call(f'''$AARCH_GCC {base_opt} {build_arg} {src_dir}*.c -o bench.elf''', shell=True, cwd=self.working_dir.joinpath('bench'))
+        build_arg = build_arg.replace("-lstdc", "-lstdc++")
+        check_call(f'''$AARCH_GCC {base_opt} {build_arg} -o bench.elf''', shell=True, cwd=self.working_dir.joinpath('bench'))
         self._binary_valid = True
         self._lists_valid = True
 
     def compile(self):
         src_dir = " ".join(self.parsed_bench.params.get("src_dir"))
         build_arg = " ".join(self.parsed_bench.params.get("build"))
+        build_arg = build_arg.replace("-lstdc", "-lstdc++")
         plugin_args = "-fplugin-arg-plugin-pass_file=list1.txt -fplugin-arg-plugin-pass_file=list2.txt -fplugin-arg-plugin-pass_file=list3.txt"
-        check_call(f'''$AARCH_GCC -O2 -fplugin=$GCC_PLUGIN -fplugin-arg-plugin-pass_replace {plugin_args} {build_arg} {src_dir}*.c -o bench.elf''', shell=True, cwd=self.working_dir.joinpath('bench'))
+        check_call(f'''$AARCH_GCC -O2 -fplugin=$GCC_PLUGIN -fplugin-arg-plugin-pass_replace {plugin_args} {build_arg} -o bench.elf''', shell=True, cwd=self.working_dir.joinpath('bench'))
         self._binary_valid = True
 
     def get_runtime(self):
@@ -264,9 +266,19 @@ class GccPRCompilationSession(CompilationSession):
         if not self._binary_valid:
             self.compile()
         if self.runtime == None:
-            arg = " ".join(self.parsed_bench.params.get("run"))
             start_time = clock_gettime(CLOCK_MONOTONIC)
-            run(f'qemu-aarch64 -L /usr/aarch64-linux-gnu ./bench.elf {arg}', shell=True, cwd=self.working_dir.joinpath('bench'), check=True)
+            run_list = self.parsed_bench.params.get("run")
+            if run_list != None:
+                for run_str in self.parsed_bench.params.get("run"):
+                    # print(f"running qemu-aarch64 -L /usr/aarch64-linux-gnu ./bench.elf {run_str}")
+                    run(f'qemu-aarch64 -L /usr/aarch64-linux-gnu ./bench.elf {run_str}', shell=True,
+                            cwd=self.working_dir.joinpath('bench'), check=True, stdout=DEVNULL,
+                            stderr=DEVNULL)
+            else:
+                run(f'qemu-aarch64 -L /usr/aarch64-linux-gnu ./bench.elf', shell=True,
+                            cwd=self.working_dir.joinpath('bench'), check=True, stdout=DEVNULL,
+                            stderr=DEVNULL)
+ 
             end_time = clock_gettime(CLOCK_MONOTONIC)
             self.runtime = end_time - start_time
         return self.runtime
