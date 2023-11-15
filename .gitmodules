@@ -1,3 +1,3 @@
 [submodule "shuffler"]
 	path = shuffler
-	url = ./shuffler/
+	url = ../Reorder_python_link/
