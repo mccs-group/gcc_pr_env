@@ -1,3 +1,3 @@
 [submodule "shuffler"]
 	path = shuffler
-	url = ../Reorder_python_link/
+	url = ../gcc_pho_shuffler/
